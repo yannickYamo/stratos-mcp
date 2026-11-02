@@ -2,28 +2,28 @@
 
 **Speed is solved. Direction is not.**
 
-Your agents can ship a feature before lunch. Claude Code, Cursor and Codex will scope your
-billing, pick a buyer, settle on a price and write the headline, all in one sitting. Every line
-plausible. Not one of them yours. Six months later you are holding beautiful working code for a
-product nobody asked for, and the runway you spent getting there. Most startups die exactly
-there.
+Your agents are fast now. Ask Claude Code, Cursor or Codex to build billing and it will pick
+the customer, set the price and write the landing page copy on the way, without asking you.
+It all reads fine. It is also made up, and it is not what you decided. Six months of that and
+you have a product that works, that nobody asked for, and a lot less runway. Most startups
+die exactly there.
 
-StratOS is a strategy operating system for founders. It is where you work out, with it, who you
-are really building for, what they would pay for, where you stand against everyone chasing the
-same customer, and which bets deserve the next month. Each decision you commit is kept with its
-evidence and its date, flagged the moment something underneath it moves, and served to every
+StratOS is a strategy operating system for founders. You work out, with it, who you are
+really building for, what they will pay, where you stand against everyone after the same
+customer, and which bets are worth the next month. Every decision you commit stays with its
+evidence and its date, gets flagged the moment something under it changes, and goes to every
 agent you run. The agents still do the work. StratOS makes sure it is the right work, and that
 the direction holds while they build.
 
-What that buys you is what a first strategic hire would, long before you can afford one: fewer
-months building the wrong thing, less money spent learning what a customer could have told
-you, and a product that lands where your customers already are, ahead of the people still
-guessing. Prompt packs make your agents fast. StratOS makes them right.
+That is what a first strategic hire gives you, years before you can afford one: fewer months
+spent building the wrong thing, less money spent learning what a customer would have told you
+for free, and a product that lands where your customers already are, while the others are
+still guessing. Prompt packs make your agents fast. StratOS makes them right.
 
 This repository is the front door for your agents: one remote MCP server and one skill. The
 skill makes an agent read your committed direction before it scopes, specs, prices or names
-anything, build from it in your own words, and say so plainly when a decision has not been made
-yet, instead of inventing one for you.
+anything, build from it in your own words, and tell you plainly when something has not been
+decided yet instead of deciding it for you.
 
 - Product: [getstratos.ai](https://getstratos.ai) · the page for your agents: [getstratos.ai/?audience=agents](https://getstratos.ai/?audience=agents)
 - The app: [app.getstratos.ai](https://app.getstratos.ai)
