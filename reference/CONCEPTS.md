@@ -1,5 +1,5 @@
-<!-- Hand-maintained (2026-09-19). Source of truth for these words: stratos-cloud/src/help/PRODUCT_HELP.md and the
-     tool descriptions in src/core/mcp-tools.ts. There is no generator yet; edit this in the same slice as the words. -->
+<!-- Hand-written. These definitions follow the product's own help text and the tool descriptions the
+     server serves; when a word changes meaning there, this file changes in the same release. No tool counts here. -->
 
 # The twelve words, and what they actually mean here
 
