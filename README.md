@@ -1,17 +1,32 @@
 # StratOS for coding agents
 
-**Your coding agent has the whole internet. It does not have your strategy.**
+**Speed is solved. Direction is not.**
 
-Claude Code, Cursor and Codex will happily scope your billing feature. They pick a buyer,
-invent a price point and write a landing page headline. All of it plausible, none of it yours,
-none of it the thing you already decided and tested.
+Your agents can ship a feature before lunch. Claude Code, Cursor and Codex will scope your
+billing, pick a buyer, settle on a price and write the headline, all in one sitting. Every line
+plausible. Not one of them yours. Six months later you are holding beautiful working code for a
+product nobody asked for, and the runway you spent getting there. Most startups die exactly
+there.
 
-StratOS is where a founder commits strategy: who they sell to, how they price, what they
-claim, what they are betting on, and which moves a person has sanctioned. This repository is
-the front door for agents: one remote MCP server and one skill that makes the agent read the
-committed position before it builds, and say so when nothing is committed.
+StratOS is a strategy operating system for founders. It is where you work out, with it, who you
+are really building for, what they would pay for, where you stand against everyone chasing the
+same customer, and which bets deserve the next month. Each decision you commit is kept with its
+evidence and its date, flagged the moment something underneath it moves, and served to every
+agent you run. The agents still do the work. StratOS makes sure it is the right work, and that
+the direction holds while they build.
 
-- Product: [getstratos.ai](https://getstratos.ai) · app: [app.getstratos.ai](https://app.getstratos.ai)
+What that buys you is what a first strategic hire would, long before you can afford one: fewer
+months building the wrong thing, less money spent learning what a customer could have told
+you, and a product that lands where your customers already are, ahead of the people still
+guessing. Prompt packs make your agents fast. StratOS makes them right.
+
+This repository is the front door for your agents: one remote MCP server and one skill. The
+skill makes an agent read your committed direction before it scopes, specs, prices or names
+anything, build from it in your own words, and say so plainly when a decision has not been made
+yet, instead of inventing one for you.
+
+- Product: [getstratos.ai](https://getstratos.ai) · the page for your agents: [getstratos.ai/?audience=agents](https://getstratos.ai/?audience=agents)
+- The app: [app.getstratos.ai](https://app.getstratos.ai)
 - Setup page written for the agent itself: [app.getstratos.ai/install.md](https://app.getstratos.ai/install.md)
 
 ## Connect
@@ -45,6 +60,10 @@ for them.
 Witnessed end to end with Claude Code. Cursor and Codex take the same block and have not yet
 been witnessed against this server.
 
+**Two kinds of key.** A key created by the founder sees every tool. A key created by a read-only
+seat sees the read tools and none of the write tools; the write tools are not even listed to
+it. Signing in with OAuth instead of a key is being built and is not available yet.
+
 ## What the agent gets
 
 `get_strategy_context` is free, deterministic and takes no arguments. It returns:
@@ -62,6 +81,19 @@ On the way back the agent can start a sanctioned move, report its outcome, check
 spec against the code before a person commits it, and post a measured number against a bet's
 own threshold. Every write stops and asks the person first.
 
+You can read everything your agent reads, in the app, and share any one committed read with
+anyone by a link.
+
+## Why not a strategy doc in the repo?
+
+You may already keep one: a positioning page in Notion or Obsidian, a pricing table in the
+README, a few skills that remind the agent who the customer is. Keep them. What none of them
+enforces is the shape of a decision, the grade of a claim, or what happens upstream when a
+bet fails. A doc cannot tell your agent that the price it is reading was superseded on Tuesday,
+that the buyer it is quoting was an assumption nobody tested, or that the question it is about
+to answer has never been decided at all. StratOS holds each decision as typed, committed state
+with its evidence and its date, and tells the agent all three.
+
 ## What it refuses to do
 
 It does not interview you and invent a strategy. If nothing is committed it says so and stops.
@@ -69,6 +101,9 @@ A guess wearing a spec's formatting is worse than an honest gap.
 
 It does not commit anything on its own. `commit` stops and asks on the first call, and a spec
 needs a preflight finding from the repository before it can be committed at all.
+
+It does not sound more certain than its evidence. Every claim carries how it is known: known,
+assumed, or to verify.
 
 It does not expose how StratOS reasons. This repository documents the front door: tool
 signatures, scopes, refusals and vocabulary. The engine stays where it is.
@@ -103,6 +138,8 @@ re-shaped, the server's build regenerates the file, including every count in it,
 change lands here. Do not edit it by hand; the next build overwrites it. `SKILL.md`,
 `CONCEPTS.md` and this README are written by people and carry no tool counts, so they cannot
 drift on a number.
+
+Something wrong, unclear or missing? Open an issue on this repository.
 
 ## License
 
