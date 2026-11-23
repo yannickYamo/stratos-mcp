@@ -58,9 +58,9 @@ tools are not even listed to it. Settings shows, for each key, what it read and 
 
 **Two actions always stop for a person: committing a decision, and closing a bet.** The first call
 writes nothing and comes back with a question. In a client that can show a prompt, you answer it
-there. In a client that cannot, the agent is handed the question and a one-time confirmation and is
-trusted to ask you before it sends it back: StratOS cannot see whether it did. If that trust is more
-than you want to extend to an agent, give it a read-only key.
+there and never leave your terminal. In a client that cannot, the agent is told nothing was changed
+and gives you the link to do it yourself in StratOS. The agent is never handed anything it could
+send back to confirm for you.
 
 **An agent is told when the record moved.** The first call a key makes after a pause ends with one
 line saying what changed since that key last called, and `get_changes` lists each change.
@@ -286,7 +286,7 @@ Commit a staged read (any read, not only a spec): it becomes the company's decis
 | `artifact_id` | string | yes | The staged read (the person who staged it gives you the id). |
 | `preflight_id` | string | no | Required for a build spec: from post_preflight_finding, for this same artifact. Ignored for any other read. |
 | `accept_bets` | string | no | Optional: comma-separated bet names to accept. Omit to accept all. |
-| `confirm` | string | no | Only on a retry, after the person confirmed: the exact confirm_token the first call returned. The first call never commits, whatever this holds. |
+| `confirm` | string | no | Not used. The person confirms in a prompt from their own tool, or in StratOS; nothing passed here confirms anything. |
 
 ### `start_move`
 
@@ -298,7 +298,7 @@ Say you have started a sanctioned move — approved by the founder, not yet in f
 
 ### `post_move_outcome`
 
-Report what happened when you carried out a sanctioned move — the ONE way a build result enters the record. Pass `build` when you ran the acceptance checks: a check that names a bet and a measured value becomes a reading against that bet's threshold, so a passing test is evidence, not a claim. Say what you learned in a line, and — when the bet it tests has a typed threshold — the MEASURED number in that threshold's unit as reading_value. Never estimate the number. TWO KINDS OF REPORT. "inconclusive" records the result and leaves the bet open: use it whenever the person has not told you the bet is decided. "conclusive" CLOSES the bet for good (validated, invalidated or pivoted) and an invalidated or pivoted close flags the reads that rest on it; that is the person's verdict, never yours, so the first conclusive call writes nothing and comes back asking you to confirm with them, exactly as commit does. A move the founder set aside, or one a refresh retired, takes no outcome: you are told which, and where its successor is.
+Report what happened when you carried out a sanctioned move — the ONE way a build result enters the record. Pass `build` when you ran the acceptance checks: a check that names a bet and a measured value becomes a reading against that bet's threshold, so a passing test is evidence, not a claim. Say what you learned in a line, and — when the bet it tests has a typed threshold — the MEASURED number in that threshold's unit as reading_value. Never estimate the number. TWO KINDS OF REPORT. "inconclusive" records the result and leaves the bet open: use it whenever the person has not told you the bet is decided. "conclusive" CLOSES the bet for good (validated, invalidated or pivoted) and an invalidated or pivoted close flags the reads that rest on it; that is the person's verdict, never yours, so the first conclusive call writes nothing and the person is asked, exactly as for commit: in a prompt from their own tool, or in StratOS. A move the founder set aside, or one a refresh retired, takes no outcome: you are told which, and where its successor is.
 
 | Argument | Type | Required | What it is |
 |---|---|---|---|
@@ -307,7 +307,7 @@ Report what happened when you carried out a sanctioned move — the ONE way a bu
 | `learning` | string | yes | One line: what you learned. |
 | `outcome` | string | no | What happened, in your words. Required when conclusive. |
 | `resolution_type` | string | no | Conclusive only: "validated" \| "invalidated" \| "pivoted". This is the verdict the bet is closed with once the person confirms. |
-| `confirm` | string | no | Conclusive only: the confirmation token the first call returned, after the person said yes. Omit on the first call. |
+| `confirm` | string | no | Not used. The person confirms in a prompt from their own tool, or in StratOS; nothing passed here confirms anything. |
 | `evidence_strength` | string | no | Conclusive only: "high" \| "medium" \| "low". |
 | `reading_value` | number | no | Measured, in the bet's threshold unit. Omit if you did not measure it. |
 | `build` | object | no | What shipped, typed: { checks: [{ name, passed, bet_id?, value? }], deviations: [string], commit_sha }. A check that names a bet and carries a measured value is recorded as a reading against that bet's own threshold — that is how a passing test becomes evidence. Never prose. |
@@ -330,7 +330,7 @@ A refusal is a **result**, not a transport error: the message is the text block,
 is `structuredContent.error` (with a few fields beside it where recovery needs them, such as the
 `spec_run_id` already in flight). Codes you can branch on: `INVALID_ARGUMENT`, `NOT_FOUND`,
 `STAGED_ONLY`, `NOT_STAGED`, `MOVE_NOT_SANCTIONED`, `PREFLIGHT_REQUIRED`, `BET_SUPERSEDED`,
-`BET_RESOLVED`, `CONFIRMATION_REQUIRED` (ask the person, then retry with the token), `CEILING_REACHED`
+`BET_RESOLVED`, `CONFIRMATION_REQUIRED` (nothing was changed; the person does it themselves, in a prompt or in StratOS), `CEILING_REACHED`
 (a spec is already being prepared: poll the `spec_run_id` it names), `GATED`, `OFF_TOPIC`,
 `NOTHING_COMMITTED`, `COMMIT_BLOCKED`, `COMMIT_BLOCKED_BY_LIMIT`, `ALL_ASSUMED`, and the move gates' own
 codes. `INTERNAL` carries `retryable: true`: it may clear on a second call, and nothing else does.
