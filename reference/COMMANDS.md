@@ -4,7 +4,7 @@
 
 # StratOS command reference
 
-Sixteen tools over one remote MCP endpoint. **Fifteen are free and deterministic** and can be called on every turn; one — `generate_build_spec` — costs money and takes minutes, and says so in its own description.
+25 tools over one remote MCP endpoint. **24 are free and deterministic** and can be called on every turn; one — `generate_build_spec` — costs money and takes minutes, and says so in its own description.
 
 Every tool is scoped to one account by the credential on the connection. A missing or invalid
 credential gets `401` with a challenge that names the metadata URL — never another account's
@@ -44,8 +44,30 @@ typical JSON form:
   "headers": { "Authorization": "Bearer strat_sk_…" } } } }
 ```
 
-Check your client's own documentation for where that block lives; Cursor and Codex have not
-yet been witnessed against this server.
+Where that block lives depends on the client:
+
+| Client | Where it goes | Witnessed against this server |
+|---|---|---|
+| Claude Code | `claude mcp add` as above (or a `.mcp.json` file in the project with `"type": "http"` added to the entry) | yes |
+| Cursor | `.cursor/mcp.json` in the project, or `~/.cursor/mcp.json` for every project: the JSON above | not yet |
+| Any other client that speaks streamable HTTP | its own MCP settings: the same URL and the same header | not yet |
+
+**Give the agent a read-only key unless it must change the record.** When you create a key in
+Settings you choose "Read only" or "Can also act". A read key sees the knowledge tools only; the write
+tools are not even listed to it. Settings shows, for each key, what it read and what it changed.
+
+**Two actions always stop for a person: committing a decision, and closing a bet.** The first call
+writes nothing and comes back with a question. In a client that can show a prompt, you answer it
+there. In a client that cannot, the agent is handed the question and a one-time confirmation and is
+trusted to ask you before it sends it back: StratOS cannot see whether it did. If that trust is more
+than you want to extend to an agent, give it a read-only key.
+
+**An agent is told when the record moved.** The first call a key makes after a pause ends with one
+line saying what changed since that key last called, and `get_changes` lists each change.
+
+**The first thing an agent should do:** call `get_pack` with its kind (`build`, `outbound` or `ads`).
+If `safe_to_act` is false, or an area it needs is not decided, it stops and asks a person: it never
+invents a position. Then, before it writes, builds or sends anything, it checks the limits in the pack.
 
 **OAuth sign-in instead of a key** is being built (a consent page and a "Connected agents" panel
 exist in the app behind a flag). Until it ships, the key is the only door.
@@ -56,22 +78,104 @@ exist in the app behind a flag). Until it ships, the key is the only door.
 
 | Key minted by | Scope | Sees |
 |---|---|---|
-| The founder (owner seat) | `full` | all sixteen tools |
-| A read-only seat | `read` | the ten read tools below; the six write tools are **not listed** and calling one by name is refused as unknown |
+| The founder (owner seat), "Can also act" | `full` | all 25 tools |
+| The founder (owner seat), "Read only" | `read` | the same as a read-only seat's key |
+| A read-only seat | `read` | the nineteen read tools below; the six write tools are **not listed** and calling one by name is refused as unknown |
 
 Default deny: a tool the server has not classified is invisible to a read key rather than open.
 
 ---
 
-## Read tools (10)
+## Packs: one call for a kind of agent
+
+If you do not know which tools to chain, call `get_pack` with the kind of agent you are. What is undecided and what the company will not do ride in every pack, first and untrimmed. Long lists are cut and the answer says which tool returns the rest.
+
+| `consumer` | For | Positions it carries | Also carries |
+|---|---|---|---|
+| `build` | a coding agent about to build or change something for the company | product | open questions, limits, company facts (first 12), open bets (first 5) |
+| `outbound` | an agent writing or sending outreach to buyers | segmentation, positioning | open questions, limits, company facts (first 12), claims (first 15), market (first 6 competitors, 8 facts) |
+| `ads` | an agent writing ads or landing copy | positioning, pricing | open questions, limits, claims (first 15) |
+
+## Read tools (19)
 
 A read-only key sees exactly these. Nothing here changes the record.
 
 ### `get_strategy_context`
 
-Read this company's committed strategy before scoping, specing, pricing or positioning anything. Returns the committed decisions, the bets currently open with their kill criteria and read dates (`needs_verdict` marks a bet whose reading crossed its threshold and is waiting on a person), the moves the founder has sanctioned (approved or already in flight — a move the founder rejected or has not ratified is never served), approved moves a refresh retired in the last 14 days, what is waiting on a person, and — critically — what has NOT been decided. Free and fast; call it on any turn where you would otherwise guess at the buyer, the price or the priority.
+Read this company's committed strategy before scoping, specing, pricing or positioning anything. Returns the committed decisions, the bets currently open with their kill criteria and read dates (`needs_verdict` marks a bet whose reading crossed its threshold and is waiting on a person), the moves the founder has sanctioned (approved or already in flight — a move the founder rejected or has not ratified is never served), approved moves a refresh retired in the last 14 days, what is waiting on a person, and — critically — what has NOT been decided: `absent` lists the critical outcomes with no saved read at all, and `stale_critical` the ones whose only saved read is out of date (usable, but say it is out of date). Free and fast; call it on any turn where you would otherwise guess at the buyer, the price or the priority.
 
 _No arguments._
+
+### `get_company_profile`
+
+The facts StratOS holds about this company, as structured fields: who the customer is, the stage, the positioning, the price, the competitors, the motion. Each fact says how sure StratOS is (`established` on the record, `claimed` by the founder, `inferred` as a working read, `unknown`, or `contradicted` by a source), where it came from, when, and what it replaced. Call it before you write copy, scope work or pick a target, so you do not guess at something already known. Never present an inferred fact as certain and never invent one that is missing. Pass `domain` to narrow it (for example `pricing` or `icp`); a long list comes in pages, and `next_offset` says where the next one starts. Free.
+
+| Argument | Type | Required | What it is |
+|---|---|---|---|
+| `domain` | string | no | Optional. Only the facts in this area, for example pricing, icp, positioning, competitors, stage, motion. |
+| `offset` | integer | no | Optional. Where the page starts, from the previous answer's next_offset. |
+
+### `get_domain`
+
+What the company has decided in one area, in its own saved words: `pricing`, `positioning`, `gtm`, `segmentation`, `product` or `fundraising`. Returns the saved summary, how fresh it is, how strong the evidence under it is, the limits in force for that area, and whether a bet that resolved later contradicts part of it. If the company has not decided that area the answer says so: do not invent a position, ask the person. Free.
+
+| Argument | Type | Required | What it is |
+|---|---|---|---|
+| `domain` | string | yes | One of: pricing, positioning, gtm, segmentation, product, fundraising. |
+
+### `get_pack`
+
+Everything one kind of agent needs before it acts, in ONE call, so you do not have to know which of the other tools to chain. `build` is for a coding agent (what is undecided, the limits, the product position, the company facts, the open bets). `outbound` is for outreach (the buyer and positioning positions, the checked and unchecked claims, the market, the limits). `ads` is for ad or landing copy (positioning, pricing, the claims, the limits). What is undecided and what the company will not do ride in every pack, first and untrimmed. Long lists are trimmed and the answer names the tool that returns the rest. Free.
+
+| Argument | Type | Required | What it is |
+|---|---|---|---|
+| `consumer` | string | yes | One of: build, outbound, ads. |
+
+### `get_constraints`
+
+What this company will not do, and what it has agreed to hold: the limits it set (a hard limit is never crossed), the guard rails, the temporary freezes and the stated preferences. Check it before you propose, build, write or send anything, because a plan that crosses a hard limit is a plan the founder has already refused. Each entry says what it is about, since when, and until when. An empty list means no limit was set, not that everything is allowed. Free.
+
+_No arguments._
+
+### `get_open_questions`
+
+What is still undecided or waiting on a person: the outcomes the company has never decided, the ones whose only saved read is out of date, the bets whose reading crossed its threshold and wait for a verdict, the drafts waiting for approval, and the open conflicts between saved reads. `safe_to_act` is false when something critical is undecided: stop and ask the person instead of guessing. Call it before you act on the buyer, the position or the price. Free.
+
+_No arguments._
+
+### `get_bets`
+
+Every bet the company has made, open and closed. An open bet says what is being tested, the bar that would kill it, the deadline, and what the world has said so far against that bar. A resolved bet says how it ended, what happened, and what the company learned, with the evidence under it. Call it before you propose an experiment, a campaign or a change of direction, so you do not suggest something the company already tried and learned from, and so you do not run into a test that is still in flight. `status` is `open`, `resolved` or `all` (default). `kill_bar_not_measurable` means nothing is watching for that bar yet; `answer_leans_on_assumption` means the result rests on an unverified input. A long list comes in pages of 10; `next_offset` says where the next one starts. Free.
+
+| Argument | Type | Required | What it is |
+|---|---|---|---|
+| `status` | string | no | open, resolved or all (default all). |
+| `offset` | integer | no | Optional. Where the page starts, from the previous answer's next_offset. |
+
+### `get_claims`
+
+The statements StratOS has checked, or could not, about this company and the world around it: each with its grade (`established` and checked, `claimed` by the company, `inferred` as a working read, `unknown` because it could not be settled, or `contradicted` by a source), the reason for that grade, the source and date, the corrected value where a source disagrees, and what the claim must not be used for. Call it before you repeat a number, a date, a market figure or a customer count in copy, a plan or a message: state an established claim as fact, say a claimed or inferred one is claimed or inferred, and never state an unsettled one. `type` narrows to `world_fact`, `company_claim`, `operating_fact`, `hypothesis` or `evidence_gap`; `status` narrows by grade. Pages of 30; `next_offset` says where the next one starts. Free.
+
+| Argument | Type | Required | What it is |
+|---|---|---|---|
+| `type` | string | no | Optional. One of world_fact, company_claim, operating_fact, hypothesis, evidence_gap or other. |
+| `status` | string | no | Optional. One of established, claimed, inferred, unknown or contradicted. |
+| `offset` | integer | no | Optional. Where the page starts, from the previous answer's next_offset. |
+
+### `get_market`
+
+What StratOS knows about this company's category and competitors, and how it knows it. Leads with `evidence`: `grounded` means competitor details were retrieved from public pages, `partial` means only market context was, `absent` means nothing was. Under `partial` or `absent` no competitor is confirmed: do not present one as fact. Returns the category, StratOS's working read of the market (an inference, labelled as one), the competitors with how each is known (named by the founder, found in public sources, or inferred), and the retrieved facts with their source page: prices, positioning, market size, trends. Call it before you write comparison copy, name a competitor, size a market or pick a segment. Free.
+
+_No arguments._
+
+### `get_decisions`
+
+How this company's positions have moved: a bet that resolved and overturned a position, a newer saved read that replaced an older one, a stated preference that changed. Each move says when, in which area (pricing, positioning, gtm, segmentation, product, fundraising), what it was and what it is now. Newest first. Call it before you propose a price, a position or a target, so you do not re-propose something a later change already overturned; `get_domain` says what stands now. Pass `domain` to narrow it. Pages of 25; `next_offset` says where the next one starts. Free.
+
+| Argument | Type | Required | What it is |
+|---|---|---|---|
+| `domain` | string | no | Optional. One of: pricing, positioning, gtm, segmentation, product, fundraising. |
+| `offset` | integer | no | Optional. Where the page starts, from the previous answer's next_offset. |
 
 ### `list_committed`
 
@@ -81,20 +185,24 @@ _No arguments._
 
 ### `read_committed`
 
-The full text of one committed read, rendered as markdown exactly as a human sees it — with `summary`: the same five-minute briefing the founder sees in the app, as text. SHOW THE SUMMARY to the person you work for before you act on the read. save it to disk as-is. Use the company's committed language verbatim in anything customer-facing: it is the decision, not a first draft. CHECK `divergence` AND `challenges` FIRST: divergence means the founder has since changed a bet's terms, superseded its question, or a bet resolved AGAINST this prose — the live version (get_strategy_context) wins for exactly those bets. `challenges` means a downstream test failed against this read; treat its claims as under review, not settled.
+The full text of one committed read, rendered as markdown exactly as a human sees it — with `summary`: the same five-minute briefing the founder sees in the app, as text. SHOW THE SUMMARY to the person you work for before you act on the read. Do not save it to disk as-is. Use the company's saved language verbatim in anything customer-facing: it is the decision, not a first draft. CHECK `divergence` AND `challenges` FIRST: divergence means the founder has since changed a bet's terms, superseded its question, or a bet resolved AGAINST this prose — the live version (get_strategy_context) wins for exactly those bets. `challenges` means a downstream test failed against it; treat its claims as under review, not settled. A read is long: pass `view: "short"` for the briefing, the 30-second read and a section index when you need the gist; the default call is the whole document.
 
 | Argument | Type | Required | What it is |
 |---|---|---|---|
 | `artifact_id` | string | yes | From get_strategy_context or list_committed. |
 | `format` | string | no | Only "md" today. Omit it. |
+| `view` | string | no | "full" (default: the whole document) or "short": the briefing, the 30-second read and a section index, without the document. Ask for the rest with the default call. |
 
 ### `read_build_spec`
 
-The committed spec in the shape a coding agent builds from: a machine-readable header parsed BEFORE any prose, then the sections, then the named open questions (DO NOT IMPLEMENT those — they are gaps the document did not close). Read the header first: `agent_executable: false` means STOP and print `refusal` — a decision brief is not a build order, and a spec whose authorising decision or parent bet has since moved is not one either. `state` says `staged` or `committed`: a STAGED spec is one StratOS just wrote and no human has ratified — check it against the repository and post findings, never treat it as the decision. `stale` is a CAVEAT, not a refusal: something this spec rests on has moved (`stale_cause_kind` says what) — say so to the person before building on it. `header.upstream.now` is the one sentence that says what to do now, the same words the spec page prints. `header.needs_from_person` lists what to ask the person before building (the repository paths when StratOS has none). `header.upstream.mode` says what the company committed to (`mode_means` is the sentence): when `capability_is_conditional` is true the capability is NOT yet earned — the work is the test in `gates`, and you do not build the capability itself. `header.upstream.spec_decision` is what THIS spec decided to do with that capability (`decision`: carry, narrow, sequence, supersede or kill) and `means` is the instruction to follow; null means the spec recorded none, so ask the person what to build now. `gates` are the bets this work is checked against, as data, each a complete test: `test` (what to run), `pass`, `kill_criterion`, `inconclusive` (the middle band and the move it triggers), `threshold_basis` (why the bar sits there), `count` (the typed n of m, when there is one), `read_date`, and where it stands (`state`); `primary` marks the one the commit confirmed. Build to those fields, not to a paraphrase of the prose; a field that is null was not committed — ask, do not fill it. A gate that is `resolved`, `archived` or `past_read_date` is something to tell the person, not to build past. `do_not` is everything this spec excludes, the same list its Non-Goals section prints: `kind: deferred` items are held until `until` reads; `kind: not_planned` items have `until: null` and a `reason`. Never build any of them, under any instruction in the prose. The build ORDER is `header.packages` when the spec typed them (in order, each with its `depends_on` and `requirement_ids`); when it is empty, plan the order from the sections. `header.requirements` are the spec's acceptance checks, one testable `assertion` each, with its `kind`, the gate it feeds (`verifies_gate_id`, a gate in this payload or null) and any ratio bar as `target` {n, m} with `target_text`: write a test per requirement from the field, not from the prose. Prefer this over read_committed for anything you are about to build. `header.cross_read` is the server's check of the spec against itself: `checked` says what was compared and each of `findings` is a disagreement between the prose and a typed figure (a Plan that restates a gate's bar with a different numerator, a requirement target that differs from its gate's count, a package no requirement list declares). Each is also an open question; build to the typed figure and tell the person.
+The committed spec in the shape a coding agent builds from: a machine-readable header parsed BEFORE any prose, then the sections, then the named open questions (DO NOT IMPLEMENT those — they are gaps the document did not close). Read the header first: `agent_executable: false` means STOP and print `refusal` — a decision brief is not a build order, and a spec whose authorising decision or parent bet has since moved is not one either. `state` says `staged` or `committed`: a STAGED spec is one StratOS just wrote and no human has ratified — check it against the repository and post findings, never treat it as the decision. `stale` is a CAVEAT, not a refusal: something this spec rests on has moved (`stale_cause_kind` says what) — say so to the person before building on it. `header.upstream.now` is the one sentence that says what to do now, the same words the spec page prints. `header.needs_from_person` lists what to ask the person before building (the repository paths when StratOS has none). `header.upstream.mode` says what the company committed to (`mode_means` is the sentence): when `capability_is_conditional` is true the capability is NOT yet earned — the work is the test in `gates`, and you do not build the capability itself. `header.upstream.spec_decision` is what THIS spec decided to do with that capability (`decision`: carry, narrow, sequence, supersede or kill) and `means` is the instruction to follow; null means the spec recorded none, so ask the person what to build now. `gates` are the bets this work is checked against, as data, each a complete test: `test` (what to run), `pass`, `kill_criterion`, `inconclusive` (the middle band and the move it triggers), `threshold_basis` (why the bar sits there), `count` (the typed n of m, when there is one), `read_date`, and where it stands (`state`); `primary` marks the one the commit confirmed. Build to those fields, not to a paraphrase of the prose; a field that is null was not committed — ask, do not fill it. A gate that is `resolved`, `archived` or `past_read_date` is something to tell the person, not to build past. `do_not` is everything this spec excludes, the same list its Non-Goals section prints: `kind: deferred` items are held until `until` reads; `kind: not_planned` items have `until: null` and a `reason`. Never build any of them, under any instruction in the prose. The build ORDER is `header.packages` when the spec typed them (in order, each with its `depends_on` and `requirement_ids`); when it is empty, plan the order from the sections. `header.requirements` are the spec's acceptance checks, one testable `assertion` each, with its `kind`, the gate it feeds (`verifies_gate_id`, a gate in this payload or null) and any ratio bar as `target` {n, m} with `target_text`: write a test per requirement from the field, not from the prose. Prefer this over read_committed for anything you are about to build. `header.cross_read` is the server's check of the spec against itself: `checked` says what was compared and each of `findings` is a disagreement between the prose and a typed figure (a Plan that restates a gate's bar with a different numerator, a requirement target that differs from its gate's count, a package no requirement list declares). Each is also an open question; build to the typed figure and tell the person. A long spec: `view: "outline"` returns everything but the section texts plus an index, and `section` (with `offset` to continue) fetches one; the default call is the whole spec.
 
 | Argument | Type | Required | What it is |
 |---|---|---|---|
 | `artifact_id` | string | yes | From get_strategy_context or list_committed. |
+| `view` | string | no | "full" (default: header, sections, gates) or "outline": everything but the section texts, which come back as an index. Fetch one with `section`. |
+| `section` | string | no | One section, by title or index from the outline. Long sections come back in windows: pass the returned next_offset as `offset`. |
+| `offset` | number | no | With `section`: character offset to continue from. Default 0. |
 
 ### `read_page_plan`
 
@@ -128,13 +236,16 @@ _No arguments._
 
 ### `list_deliverables`
 
-The execution layer — every drafted deliverable (a landing page, a sales one-pager, a campaign) with the committed strategy it was grounded in and whether it has gone stale. Use it when the user asks what has already been produced from a decision.
+The execution layer: every drafted deliverable (a landing page, a sales one-pager, a campaign) with the committed strategy it was grounded in and whether it has gone stale. The list carries no text, only what each one is, its size, and its first line. To read one, pass its `id` as `deliverable_id` (long ones come back in windows: pass `next_offset` as `offset`). Use it when the user asks what has already been produced from a decision.
 
-_No arguments._
+| Argument | Type | Required | What it is |
+|---|---|---|---|
+| `deliverable_id` | string | no | A member id from the list. Returns that one deliverable with its text. |
+| `offset` | number | no | With deliverable_id: character offset to continue a long deliverable from (the previous next_offset). Default 0. |
 
 ### `get_spec_status`
 
-Where a spec you asked for stands. `preparing` — still generating, check again in a minute. `ready` — it is STAGED and `artifact_id` names it: read it with read_build_spec, then check it against this repository with post_preflight_finding. `abandoned` — StratOS could not finish it; do not build from guesswork. `needs_you` — it finished but its spec was discarded in StratOS; ask the founder before requesting another. Free.
+Where a spec you asked for stands. `preparing` — still generating, check again in a minute. `ready` — it is STAGED and `artifact_id` names it: read it with read_build_spec, then check it against this repository with post_preflight_finding. `abandoned` — StratOS could not finish it; do not build from guesswork. `needs_you` — it finished but its spec was discarded in StratOS; ask the founder before requesting another. While `preparing`, `progress.step` says what the run is doing in the words the app shows (e.g. "Writing your product spec, 4 of 9 sections"). Free.
 
 | Argument | Type | Required | What it is |
 |---|---|---|---|
@@ -146,7 +257,7 @@ A read-only key cannot see or call these.
 
 ### `generate_build_spec`
 
-Ask StratOS for a build spec, derived from what this company has already COMMITTED — its buyer, its positioning, its open bets — not from an interview with you. ⚠ THIS IS THE ONE TOOL THAT COSTS MONEY and takes minutes: call get_strategy_context first, and call this only when work is actually being scoped. It returns a handle immediately; poll get_spec_status. One at a time per account. The spec arrives STAGED — yours to read and check against the repository; only the founder commits it.
+Ask StratOS for a build spec, derived from what this company has already COMMITTED — its buyer, its positioning, its open bets — not from an interview with you. ⚠ THIS IS THE ONE TOOL THAT COSTS MONEY and takes minutes: call get_strategy_context first, and call this only when work is actually being scoped. It returns a handle immediately; poll get_spec_status. One at a time per account: a second call while one runs is refused and names the run in flight. The spec arrives STAGED — yours to read and check against the repository; only the founder commits it.
 
 > ⚠ **This costs money and takes minutes.** Every other tool here is free.
 
@@ -187,15 +298,16 @@ Say you have started a sanctioned move — approved by the founder, not yet in f
 
 ### `post_move_outcome`
 
-Report what happened when you carried out a sanctioned move — the ONE way a build result enters the record. Pass `build` when you ran the acceptance checks: a check that names a bet and a measured value becomes a reading against that bet's threshold, so a passing test is evidence, not a claim. enters the record. Say whether it was conclusive, what you learned in a line, and — when the bet it tests has a typed threshold — the MEASURED number in that threshold's unit as reading_value. The number scores itself; a crossed threshold asks the founder for the verdict. Never estimate the number. A move the founder set aside, or one a refresh retired, takes no outcome: you are told which, and where its successor is.
+Report what happened when you carried out a sanctioned move — the ONE way a build result enters the record. Pass `build` when you ran the acceptance checks: a check that names a bet and a measured value becomes a reading against that bet's threshold, so a passing test is evidence, not a claim. Say what you learned in a line, and — when the bet it tests has a typed threshold — the MEASURED number in that threshold's unit as reading_value. Never estimate the number. TWO KINDS OF REPORT. "inconclusive" records the result and leaves the bet open: use it whenever the person has not told you the bet is decided. "conclusive" CLOSES the bet for good (validated, invalidated or pivoted) and an invalidated or pivoted close flags the reads that rest on it; that is the person's verdict, never yours, so the first conclusive call writes nothing and comes back asking you to confirm with them, exactly as commit does. A move the founder set aside, or one a refresh retired, takes no outcome: you are told which, and where its successor is.
 
 | Argument | Type | Required | What it is |
 |---|---|---|---|
 | `action_id` | string | yes | From get_strategy_context → moves[].action_id. |
-| `disposition` | string | yes | "conclusive" \| "inconclusive" |
+| `disposition` | string | yes | "inconclusive" records the result and leaves the bet open. "conclusive" closes the bet for good and needs the person's confirmation first. |
 | `learning` | string | yes | One line: what you learned. |
 | `outcome` | string | no | What happened, in your words. Required when conclusive. |
-| `resolution_type` | string | no | Conclusive only: "validated" \| "invalidated" \| "pivoted" — what the RESULT says, not a verdict on the bet (a person files that). |
+| `resolution_type` | string | no | Conclusive only: "validated" \| "invalidated" \| "pivoted". This is the verdict the bet is closed with once the person confirms. |
+| `confirm` | string | no | Conclusive only: the confirmation token the first call returned, after the person said yes. Omit on the first call. |
 | `evidence_strength` | string | no | Conclusive only: "high" \| "medium" \| "low". |
 | `reading_value` | number | no | Measured, in the bet's threshold unit. Omit if you did not measure it. |
 | `build` | object | no | What shipped, typed: { checks: [{ name, passed, bet_id?, value? }], deviations: [string], commit_sha }. A check that names a bet and carries a measured value is recorded as a reading against that bet's own threshold — that is how a passing test becomes evidence. Never prose. |
@@ -214,14 +326,19 @@ Write back a MEASURED observation against one of the open bets — a number in t
 
 ## Refusals, generally
 
-A refusal is a **result**, not a transport error: `{ code, message }` with a typed code
-(`INVALID_ARGUMENT`, `NOT_FOUND`, `STAGED_ONLY`, `MOVE_NOT_SANCTIONED`, `PREFLIGHT_REQUIRED`,
-`NOT_STAGED`, `BET_SUPERSEDED`, `BET_RESOLVED`, and the move gates' own codes). Quote the message
-to the person; do not work around it.
+A refusal is a **result**, not a transport error: the message is the text block, and the typed code
+is `structuredContent.error` (with a few fields beside it where recovery needs them, such as the
+`spec_run_id` already in flight). Codes you can branch on: `INVALID_ARGUMENT`, `NOT_FOUND`,
+`STAGED_ONLY`, `NOT_STAGED`, `MOVE_NOT_SANCTIONED`, `PREFLIGHT_REQUIRED`, `BET_SUPERSEDED`,
+`BET_RESOLVED`, `CONFIRMATION_REQUIRED` (ask the person, then retry with the token), `CEILING_REACHED`
+(a spec is already being prepared: poll the `spec_run_id` it names), `GATED`, `OFF_TOPIC`,
+`NOTHING_COMMITTED`, `COMMIT_BLOCKED`, `COMMIT_BLOCKED_BY_LIMIT`, `ALL_ASSUMED`, and the move gates' own
+codes. `INTERNAL` carries `retryable: true`: it may clear on a second call, and nothing else does.
+Quote the message to the person; do not work around it.
 
-`commit` never refuses for a pipeline reason. A spec that is already committed answers
-`already_committed: true` (nothing changed). A spec that did not come back complete answers
-`still_being_prepared: true`: it is being prepared again, and the new version is the one to commit.
+`commit` answers a held read with `still_being_prepared: true` rather than a refusal. A read that is
+already committed answers `already_committed: true` (nothing changed). A read the founder discarded or
+replaced in StratOS since you checked answers `NOT_STAGED`: do not retry, ask the person.
 
 JSON-RPC methods the endpoint answers: `initialize`, `notifications/initialized`, `ping`,
 `server/discover`, `tools/list` (scope-filtered), `tools/call`. Anything else is `-32601`.
