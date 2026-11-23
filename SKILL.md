@@ -99,8 +99,10 @@ it. For a spec, `commit` requires the `preflight_id` this returns.
 `list_committed` also returns `staged`: the reads waiting for a decision, each with its
 `artifact_id`, what it is and a one-line summary. `commit(artifact_id)` works for any of them;
 only a spec (`needs_preflight: true`) needs a `preflight_id`. The first call never commits: it
-stops and asks the person, and returns a `confirm_token` to send back on the retry once they
-have said yes. **Never call `commit` until the person you work for has said to.** The answer says
+stops and the person is asked, in a prompt from their own tool or, where the tool cannot show
+one, in StratOS (the answer gives you the link to pass on). You are never handed anything to
+confirm with; nothing you send can confirm for them. If they decline, do not ask again.
+**Never call `commit` until the person you work for has said to.** The answer says
 what landed on the board (bets and the actions that test them) and the one next step: tell the
 person both. If it says the read is `still_being_prepared`, it did not come back complete and
 StratOS is preparing it again; commit the new version when it lands.
@@ -157,8 +159,9 @@ claude mcp add --transport http stratos https://stratos-cloud.onrender.com/mcp \
   --header "Authorization: Bearer strat_sk_…"
 ```
 
-Other MCP clients take the same URL and header; see `reference/COMMANDS.md`. A key minted by a
-read-only seat sees the read tools and none of the write tools.
+Other MCP clients take the same URL and header; see `reference/COMMANDS.md`. A read-only key (the
+founder chooses that when creating it, and a read-only seat's key always is) sees the read tools
+and none of the write tools.
 
 ---
 

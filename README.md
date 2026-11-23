@@ -60,9 +60,10 @@ for them.
 Witnessed end to end with Claude Code. Cursor and Codex take the same block and have not yet
 been witnessed against this server.
 
-**Two kinds of key.** A key created by the founder sees every tool. A key created by a read-only
-seat sees the read tools and none of the write tools; the write tools are not even listed to
-it. Signing in with OAuth instead of a key is being built and is not available yet.
+**Two kinds of key.** When the founder creates a key they choose "Can also act" or "Read only".
+A read-only key (a read-only seat's key always is) sees the read tools and none of the write
+tools; the write tools are not even listed to it. Committing a decision and closing a bet always
+stop for the person, who answers in their own tool's prompt or in StratOS. Signing in with OAuth instead of a key is being built and is not available yet.
 
 ## What the agent gets
 
